@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>Youtube downloader</title>
+</head>
+
+<body>
+<h1>Youtube Downloader!</h1>
+
+<div>
+<!--    <form method="post" action="/download_video">-->
+        <label for="link">Video URL:</label>
+        <input type="text" id="link" name="link"><br><br>
+        <button id="connect" onclick="meee()" >Download dsd</button>
+<!--    </form>-->
+</div>
+<hr />
+
+
+
+<script>
+    function meee() {        
+        const { location } = window;
+
+        const proto = location.protocol.startsWith('https') ? 'wss' : 'ws'
+        const wsUri = `${proto}://${location.host}/ws`
+
+        socket = new WebSocket(wsUri)
+
+        socket.onopen = () => {         
+        }
+        
+        
+        var video_link = document.getElementById('link').value;
+                
+        fetch("/download_video", {
+            method: "POST",
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({link: video_link})
+        }).then((res => {
+            console.log(res);
+        }));            
+    }   
+
+</script>
+</body>
+</html>
