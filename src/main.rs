@@ -2,6 +2,7 @@ mod downloader;
 mod websocket;
 
 use std::future::Future;
+use std::io::Read;
 use std::path::PathBuf;
 use std::ptr::null;
 use std::str::FromStr;
@@ -11,30 +12,46 @@ use actix_web::{App, HttpRequest, HttpResponse, HttpServer, Responder, web};
 use rustube::{Callback, CallbackArguments, Error, OnCompleteType, OnProgressType, Stream, url, Video, VideoDetails};
 use rustube::stream::callback::OnProgressClosure;
 use rustube::url::Url;
-use rustube::video_info::player_response::streaming_data::{MimeType, ProjectionType, Quality, SignatureCipher};
+use rustube::video_info::player_response::streaming_data::{MimeType, ProjectionType, Quality, QualityLabel, SignatureCipher};
 use actix_cors::Cors;
 use actix_files::NamedFile;
 use actix_web_actors::ws;
 use serde::{Deserialize};
+use crate::websocket::server_messages::{OnDownloadFinished, OnDownloadProgress};
 use crate::websocket::session::DownloadSession;
-use crate::websocket::socket_server::{OnClientConnected, OnStartListeningDownloadProgress, SocketServer};
+use crate::websocket::socket_server::{OnClientConnected, SocketServer};
+use actix_web::body;
 
 #[derive(Deserialize)]
-pub struct VideoInfo {
+#[serde(rename_all = "camelCase")]
+pub struct DownloadVideoQueryParams {
     pub link: String,
-    pub session_id: usize
+  //  pub quality_label: QualityLabel,
 }
 
-pub async fn download_video(req: HttpRequest, srv: web::Data<Addr<SocketServer>>) -> impl Responder {   
-    let params = web::Query::<VideoInfo>::from_query(req.query_string()).unwrap();
-       
-    let path = downloader::download(params.link.as_str()).await;
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct VideoInfoQueryParams {
+    pub link: String,
+}
+
+pub async fn download_video(req: HttpRequest, mut srv: web::Data<Addr<SocketServer>>) -> impl Responder {
+   let params = web::Query::<DownloadVideoQueryParams>::from_query(req.query_string()).unwrap();
     
-    srv.get_ref().do_send(OnStartListeningDownloadProgress{ session_id: params.session_id });
+    if let Ok(file_content) = std::fs::read(params.link.clone()) {
+        let image_content =  actix_web::web::Bytes::from(file_content);
+
+        return HttpResponse::Ok().content_type("application/force-download")
+            .append_header(
+                (
+                    "Content-Disposition",
+                    format!("attachment; filename={}.mp4;", params.link.clone())
+                 )
+            )
+            .body(image_content);
+    }
     
-    ""
-    
-    //NamedFile::open_async(path.expect("")).await.unwrap()
+    return HttpResponse::NoContent().body("");
 }
 
 pub async fn index() -> impl Responder {
@@ -42,20 +59,21 @@ pub async fn index() -> impl Responder {
 }
 
 pub async fn video_info(req: HttpRequest) -> impl Responder {
-    let params = web::Query::<VideoInfo>::from_query(req.query_string()).unwrap();
-    
+    let params = web::Query::<VideoInfoQueryParams>::from_query(req.query_string()).unwrap();
+
     if let Ok(videoDataInfo) = downloader::fetch_video_info(params.link.as_str()).await {
         return HttpResponse::Ok().json(videoDataInfo);
     }
-    
+
     HttpResponse::BadRequest().body("")
 }
 
-pub async fn web_socket_connection_handler(req: HttpRequest, stream: web::Payload, srv: web::Data<Addr<SocketServer>>) -> Result<HttpResponse, actix_web::Error> {    
+pub async fn web_socket_connection_handler(req: HttpRequest, stream: web::Payload, srv: web::Data<Addr<SocketServer>>) -> Result<HttpResponse, actix_web::Error> {
     let download_session = DownloadSession {
         server_ref: srv.get_ref().clone(),
+        session_id: 0,
     };
-       
+
     ws::start(
         download_session,
         &req,
@@ -69,17 +87,18 @@ pub async fn start() -> std::io::Result<()> {
         let cors = Cors::default()
             .allow_any_origin();
 
-        let socket_server = SocketServer::new().start();
+        let socket_server = SocketServer::new();
+        let socket_server_addr = socket_server.start();
 
         App::new()
-            .app_data(web::Data::new(socket_server.clone()))
-            .wrap(cors)         
+            .app_data(web::Data::new(socket_server_addr.clone()))
+            // .app_data(web::Data::new(socket_server))
+            .wrap(cors)
             .configure(routes)
     })
         .bind(("0.0.0.0", 5000))?
         .run()
         .await
-
 }
 
 fn routes(app: &mut web::ServiceConfig) {
@@ -91,5 +110,5 @@ fn routes(app: &mut web::ServiceConfig) {
 }
 
 fn main() {
-   start().expect("");
+    start().expect("");
 }

@@ -5,7 +5,7 @@ use actix::dev::Stream;
 use rustube::{Callback, CallbackArguments, OnProgressType, Video};
 use rustube::video_info::player_response::streaming_data::{Quality, QualityLabel};
 use rustube::video_info::player_response::video_details::Thumbnail;
-use crate::Url;
+use crate::{SocketServer, Url};
 use crate::url::ParseError;
 use serde::{Serialize, Deserialize};
 
@@ -35,17 +35,24 @@ impl Display for DownloadError {
 
 impl Error for DownloadError {}
 
-pub async fn download(raw_url: &str) -> Result<PathBuf, Box<dyn Error>> {
+pub async fn download(raw_url: &str, quality_label: QualityLabel, progress_callback: impl Fn(f64) -> () + 'static) -> Result<PathBuf, Box<dyn Error>> {
     if let Ok(url) = Url::parse(raw_url) {
         if let Ok(video) = Video::from_url(&url).await {
             if let Some(stream_best_quality) = video.streams()
                 .iter()
-                .filter(|stream| stream.includes_video_track)
-                .min_by_key(|stream| stream.quality_label) {
+                .filter(|stream| stream.includes_video_track && matches![stream.quality_label.unwrap(), quality_label])
+                .next()
+                {
+                //.min_by_key(|stream| ) {
                 let mut callback = Callback::new();
 
-                callback.on_progress = OnProgressType::Closure(Box::from(|p: CallbackArguments| {
-                  //  println!("{}", p.current_chunk as f64 / (p.content_length.expect("") as usize) as f64);
+                callback.on_progress = OnProgressType::Closure(Box::from(move |p: CallbackArguments| {
+                    
+                    if let Some(content_length) = p.content_length {
+                        if content_length > 0 {
+                            progress_callback(p.current_chunk as f64 / content_length as f64);
+                        }
+                    }
                 }));
                 if let Ok(path) = stream_best_quality.download_with_callback(callback).await {
                     return Ok(path);
