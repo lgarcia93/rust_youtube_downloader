@@ -21,7 +21,7 @@ use crate::websocket::server_messages::{OnDownloadFinished, OnDownloadProgress};
 use crate::websocket::session::DownloadSession;
 use crate::websocket::socket_server::{OnClientConnected, SocketServer};
 use actix_web::body;
-
+use actix_files as fs;
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct DownloadVideoQueryParams {
@@ -91,8 +91,7 @@ pub async fn start() -> std::io::Result<()> {
         let socket_server_addr = socket_server.start();
 
         App::new()
-            .app_data(web::Data::new(socket_server_addr.clone()))
-            // .app_data(web::Data::new(socket_server))
+            .app_data(web::Data::new(socket_server_addr.clone()))     
             .wrap(cors)
             .configure(routes)
     })
@@ -102,11 +101,17 @@ pub async fn start() -> std::io::Result<()> {
 }
 
 fn routes(app: &mut web::ServiceConfig) {
-    app
+    app        
         .service(web::resource("/download_video").route(web::get().to(download_video)))
-        .service(web::resource("/").route(web::get().to(index)))
-        .service(web::resource("/video_info").route(web::get().to(video_info)))
-        .route("/ws", web::get().to(web_socket_connection_handler));
+        //    .service(web::resource("/").route(web::get().to(index)))
+        .service(web::resource("/video_info").route(web::get().to(video_info)))      
+        .route("/ws", web::get().to(web_socket_connection_handler))
+        .service(
+            fs::Files::new("/", "./static")
+                //.show_files_listing()
+                .index_file("index.html")
+                .use_last_modified(true),
+        );
 }
 
 fn main() {

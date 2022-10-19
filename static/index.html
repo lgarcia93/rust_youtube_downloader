@@ -1,48 +1,58 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <meta charset="utf-8" />
-    <title>Youtube downloader</title>
+  <!--
+    If you are serving your web app in a path other than the root, change the
+    href value below to reflect the base path you are serving from.
+
+    The path provided below has to start and end with a slash "/" in order for
+    it to work correctly.
+
+    For more details:
+    * https://developer.mozilla.org/en-US/docs/Web/HTML/Element/base
+
+    This is a placeholder for base href that will be replaced by the value of
+    the `--base-href` argument provided to `flutter build`.
+  -->
+  <base href="/">
+
+  <meta charset="UTF-8">
+  <meta content="IE=Edge" http-equiv="X-UA-Compatible">
+  <meta name="description" content="A new Flutter project.">
+
+  <!-- iOS meta tags & icons -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="youtube_downloader_flutter">
+  <link rel="apple-touch-icon" href="icons/Icon-192.png">
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" href="favicon.png"/>
+
+  <title>youtube_downloader_flutter</title>
+  <link rel="manifest" href="manifest.json">
+
+  <script>
+    // The value below is injected by flutter build, do not touch.
+    var serviceWorkerVersion = '532726601';
+  </script>
+  <!-- This script adds the flutter initialization JS code -->
+  <script src="flutter.js" defer></script>
 </head>
-
 <body>
-<h1>Youtube Downloader!</h1>
-
-<div>
-<!--    <form method="post" action="/download_video">-->
-        <label for="link">Video URL:</label>
-        <input type="text" id="link" name="link"><br><br>
-        <button id="connect" onclick="meee()" >Download dsd</button>
-<!--    </form>-->
-</div>
-<hr />
-
-
-
-<script>
-    function meee() {        
-        const { location } = window;
-
-        const proto = location.protocol.startsWith('https') ? 'wss' : 'ws'
-        const wsUri = `${proto}://${location.host}/ws`
-
-        socket = new WebSocket(wsUri)
-
-        socket.onopen = () => {         
+  <script>
+    window.addEventListener('load', function(ev) {
+      // Download main.dart.js
+      _flutter.loader.loadEntrypoint({
+        serviceWorker: {
+          serviceWorkerVersion: serviceWorkerVersion,
         }
-        
-        
-        var video_link = document.getElementById('link').value;
-                
-        fetch("/download_video", {
-            method: "POST",
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({link: video_link})
-        }).then((res => {
-            console.log(res);
-        }));            
-    }   
-
-</script>
+      }).then(function(engineInitializer) {
+        return engineInitializer.initializeEngine();
+      }).then(function(appRunner) {
+        return appRunner.runApp();
+      });
+    });
+  </script>
 </body>
 </html>
