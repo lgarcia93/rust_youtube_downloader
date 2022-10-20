@@ -82,8 +82,6 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for DownloadSession {
                     }
                     _ => {}
                 }
-
-                print!("Message received: {}", m);
             }
             ws::Message::Binary(_) => println!("Server doesn't accept binary"),
             Message::Continuation(_) => {

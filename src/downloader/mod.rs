@@ -78,6 +78,7 @@ pub async fn fetch_video_info(raw_url: &str) -> Result<Vec<VideoDataInfo>, Box<d
                         final_quality = ql;
                     }
                     
+                                     
                     return VideoDataInfo {
                         title: stream.video_details.title.clone(),
                         quality_label: final_quality,

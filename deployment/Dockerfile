@@ -1,26 +1,26 @@
 FROM rust:latest AS builder
 
-RUN rustup target add x86_64-unknown-linux-musl
-RUN apt update && apt install -y musl-tools musl-dev
-RUN update-ca-certificates
-
 WORKDIR /youtube_downloader
 
-COPY ./ .
+COPY ./Cargo.toml ./
+COPY ./src/ ./src/
+COPY ./static/ ./static/
 
-RUN cargo build --target x86_64-unknown-linux-musl --release
+RUN cargo build --release
 
 ####################################################################################################
 ## Final image
 ####################################################################################################
-FROM scratch
+FROM gcr.io/distroless/cc-debian10
 
 # Import from builder.
 
 WORKDIR /youtube_downloader
 
 # Copy our build
-COPY --from=builder /myip/target/x86_64-unknown-linux-musl/release/youtube_downloader ./
+COPY --from=builder /youtube_downloader/target/release/server ./
+COPY --from=builder /youtube_downloader/static/ ./static/
 
+EXPOSE 5000
 
-CMD ["/youtube_downloader/youtube_downloader"]
+CMD ["/youtube_downloader/server"]

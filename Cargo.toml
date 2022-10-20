@@ -18,3 +18,4 @@ actix-web-actors = "4.1"
 log = "0.4"
 rand = "0.8"
 serde_with = "2.0.1"
+#openssl = { version = "0.10", features = ["vendored"] }
